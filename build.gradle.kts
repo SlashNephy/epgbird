@@ -11,10 +11,6 @@ plugins {
 object Versions {
     const val Penicillin = "6.1.0"
     const val Ktor = "1.5.2"
-    const val kaml = "0.28.3"
-
-    const val Exposed = "0.29.1"
-    const val SQLiteJDBC = "3.30.1"
 
     const val KotlinLogging = "2.0.4"
     const val Logback = "1.2.3"
@@ -27,12 +23,6 @@ object Libraries {
     const val Penicillin = "blue.starry:penicillin:${Versions.Penicillin}"
     const val KtorClientCIO = "io.ktor:ktor-client-cio:${Versions.Ktor}"
     const val KtorClientSerialization = "io.ktor:ktor-client-serialization:${Versions.Ktor}"
-    const val kaml = "com.charleskorn.kaml:kaml:${Versions.kaml}"
-
-    const val ExposedCore = "org.jetbrains.exposed:exposed-core:${Versions.Exposed}"
-    const val ExposedJDBC = "org.jetbrains.exposed:exposed-jdbc:${Versions.Exposed}"
-    const val ExposedJavaTime = "org.jetbrains.exposed:exposed-java-time:${Versions.Exposed}"
-    const val SqliteJDBC = "org.xerial:sqlite-jdbc:${Versions.SQLiteJDBC}"
 
     const val KotlinLogging = "io.github.microutils:kotlin-logging:${Versions.KotlinLogging}"
     const val LogbackCore = "ch.qos.logback:logback-core:${Versions.Logback}"
@@ -41,19 +31,15 @@ object Libraries {
     const val JUnitJupiter = "org.junit.jupiter:junit-jupiter:${Versions.JUnit}"
 
     val ExperimentalAnnotations = setOf(
-        "kotlinx.coroutines.ExperimentalCoroutinesApi",
         "kotlin.io.path.ExperimentalPathApi",
         "kotlin.time.ExperimentalTime",
-        "kotlin.ExperimentalStdlibApi",
-        "kotlinx.coroutines.FlowPreview"
+        "kotlin.ExperimentalStdlibApi"
     )
 }
 
 repositories {
     mavenCentral()
 
-    // for exposed
-    jcenter()
     // TODO: It should be removed by May 1, 2021. It is potentially used by kotlinx-datetime.
     maven(url = "https://kotlin.bintray.com/kotlinx")
 }
@@ -62,12 +48,6 @@ dependencies {
     implementation(Libraries.Penicillin)
     implementation(Libraries.KtorClientCIO)
     implementation(Libraries.KtorClientSerialization)
-    implementation(Libraries.kaml)
-
-    implementation(Libraries.ExposedCore)
-    implementation(Libraries.ExposedJDBC)
-    implementation(Libraries.ExposedJavaTime)
-    implementation(Libraries.SqliteJDBC)
 
     implementation(Libraries.KotlinLogging)
     implementation(Libraries.LogbackCore)
