@@ -75,8 +75,4 @@ services:
       WITH_MP4: 0
       # 録画先の親ディレクトリ
       MOUNT_POINT: /mnt
-
-volumes:
-  data:
-    driver: local
 ```
