@@ -23,8 +23,11 @@ RUN gradle -version > /dev/null \
 # Final Stage
 FROM adoptopenjdk:11-jre-hotspot
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/build/libs/epgbird-all.jar /app/epgbird.jar

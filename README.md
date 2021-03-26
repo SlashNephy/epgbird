@@ -49,6 +49,8 @@ services:
     volumes:
       - /mnt:/mnt:ro
     environment:
+      # タイムゾーン
+      TZ: Asia/Tokyo
       # ログレベル
       LOG_LEVEL: TRACE
       # EPGStation 接続情報
