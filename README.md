@@ -13,49 +13,14 @@
 
 [![screenshot.png](https://raw.githubusercontent.com/SlashNephy/epgbird/master/docs/screenshot.png)](https://github.com/SlashNephy/epgbird)
 
+Demo => [@a0b4m0c4](https://twitter.com/a0b4m0c4)
+
 ## Requirements
 
 - Java 8 or later
+- ffmpeg (if you want to tweet with media)
 
 ## Get Started
-
-`config.yml`
-
-```yaml
-# Twitter の資格情報
-ck: xxx
-cs: xxx
-at: xxx
-ats: xxx
-
-# ツイートの取得間隔 (秒)
-# 10 未満の値はエラーになります
-interval: 3600
-# 一度のチェックで通知する最大数
-limit: 1
-# ログレベル (OFF, ERROR, WARN, INFO, DEBUG, TRACE, ALL)
-logLevel: 'TRACE'
-
-# チェックするツイート定義のリスト
-tweets:
-    # スクリーンネーム
-  - userScreenName: 'AUTOMATONJapan'
-    # Discord Webhook URL
-    discordWebhookUrl: 'https://discord.com/api/webhooks/xxx/xxx'
-    # RT を無視するか
-    ignoreRTs: true
-    # 無視するテキスト (部分一致)
-    ignoreTexts:
-      - '【求人】'
-
-    # ユーザ ID
-  - userId: 4000001
-    discordWebhookUrl: 'https://discord.com/api/webhooks/xxx/xxx'
-
-    # リスト ID
-  - listId: 10000001
-    discordWebhookUrl: 'https://discord.com/api/webhooks/xxx/xxx'
-```
 
 ### Docker
 
@@ -74,13 +39,40 @@ There are some image tags.
 version: '3.8'
 
 services:
+  epgstation:
+    # 省略
+  
   epgbird:
     container_name: epgbird
     image: slashnephy/epgbird:latest
     restart: always
     volumes:
-      - ./config.yml:/app/config.yml:ro
-      - data:/app/data
+      - /mnt:/mnt:ro
+    environment:
+      # ログレベル
+      LOG_LEVEL: TRACE
+      # EPGStation 接続情報
+      EPGSTATION_HOST: epgstation
+      EPGSTATION_PORT: 8888
+      # Twitter 資格情報 (必須)
+      TWITTER_CK: xxx
+      TWITTER_CS: xxx
+      TWITTER_AT: xxx
+      TWITTER_ATS: xxx
+      # 新規の録画済番組を通知するかどうか
+      INCLUDE_RECORDED: 1
+      # 新規の録画中を通知するかどうか
+      INCLUDE_RECORDING: 1
+      # 新規の予約を通知するかどうか
+      INCLUDE_RESERVES: 1
+      # 録画中を通知する間隔 (分)
+      RECORDING_POST_FREQUENCY_MINUTES: 10
+      # ツイートに PNG 画像を含めるかどうか
+      WITH_PNG: 1
+      # ツイートに MP4 動画を含めるかどうか
+      WITH_MP4: 0
+      # 録画先の親ディレクトリ
+      MOUNT_POINT: /mnt
 
 volumes:
   data:
