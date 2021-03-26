@@ -122,7 +122,8 @@ object Epgbird {
             append("(")
 
             val duration = (item.endAt - item.startAt).milliseconds
-            val (hours, minutes) = floor(duration.inHours).toInt() to duration.inMinutes.roundToInt()
+            val hours = floor(duration.inHours).toInt()
+            val minutes =  duration.inMinutes.roundToInt() - hours * 60
             if (hours > 0) {
                 append("${hours}時間")
             }
