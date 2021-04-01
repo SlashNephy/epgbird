@@ -27,7 +27,6 @@ jobs:
           - linux/arm64/v8
           - linux/ppc64le
           - linux/s390x
-          - windows/amd64
 
     runs-on: ubuntu-latest
 
@@ -64,5 +63,5 @@ jobs:
           push: true
           platforms: ${{ matrix.platforms }}
           tags: ${{ env.DOCKER_BASE_NAME }}:${{ env.DOCKER_TAG }}
-          # cache-from: ${{ env.DOCKER_BASE_NAME }}:${{ env.DOCKER_TAG }}
+          cache-from: ${{ env.DOCKER_BASE_NAME }}:${{ env.DOCKER_TAG }}
           build-args: BUILDKIT_INLINE_CACHE=1
