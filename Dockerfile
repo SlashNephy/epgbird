@@ -21,7 +21,7 @@ RUN gradle -version > /dev/null \
     && gradle shadowJar --parallel --no-daemon
 
 # Final Stage
-FROM adoptopenjdk:11-jre-hotspot
+FROM --platform=$BUILDPLATFORM adoptopenjdk:11-jre-hotspot
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
