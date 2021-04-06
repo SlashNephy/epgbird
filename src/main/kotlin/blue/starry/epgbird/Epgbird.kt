@@ -91,12 +91,20 @@ object Epgbird {
 
     private suspend fun postTweet(item: ProgramItem) {
         // 経過時間 (分)
-        val elapsedMinute = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
+        val elapsedMinutes = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
+        // 番組の長さ (分)
+        val totalMinutes = (item.endAt - item.startAt).milliseconds.inMinutes.roundToInt()
+
         // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
-        if (item.isRecording && elapsedMinute % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
+        if (item.isRecording && elapsedMinutes % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
             return
         }
-        // TODO: 録画終了と録画中が被る
+
+        // 番組の長さだけ録画した場合には無視
+        // ex) 30分番組で【30分録画中】とならないようにする
+        if (item.isRecording && elapsedMinutes == totalMinutes) {
+            return
+        }
 
         logger.trace { item }
 
@@ -104,7 +112,7 @@ object Epgbird {
                 // 予約追加
                 item.isReserve -> Env.RESERVES_FORMAT
                 // 録画開始
-                item.isRecording && elapsedMinute == 0 -> Env.RECORD_START_FORMAT
+                item.isRecording && elapsedMinutes == 0 -> Env.RECORD_START_FORMAT
                 // 録画中
                 item.isRecording -> Env.RECORDING_FORMAT
                 // 録画完了
@@ -140,7 +148,7 @@ object Epgbird {
             // 経過時間 (分)
             // RESERVES_FORMAT で使用することは想定されていない
             }.replace("%ELAPSED_MINUTES%") {
-                elapsedMinute.toString()
+                elapsedMinutes.toString()
             // 番組の開始時刻
             // 時刻のフォーマットは TIME_FORMAT 環境変数によりコントロール可能
             }.replace("%START_TIME%") {
@@ -189,7 +197,7 @@ object Epgbird {
         }
 
         // チューナーの準備が整うまで待機
-        if (input != null && elapsedMinute == 0) {
+        if (input != null && elapsedMinutes == 0) {
             delay(3.seconds)
         }
 
@@ -197,7 +205,7 @@ object Epgbird {
             text = text,
             input = input,
             // 録画開始直後は mp4 を生成できない
-            withMp4 = elapsedMinute > 0 && Env.WITH_MP4,
+            withMp4 = elapsedMinutes > 0 && Env.WITH_MP4,
             withPng = Env.WITH_PNG,
             isRecording = item.isRecording
         )
