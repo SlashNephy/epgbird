@@ -34,7 +34,7 @@ object Epgbird {
             .filter { it.channelId !in Env.IGNORE_CHANNEL_IDS }
             .map {
                 launch {
-                    postRecordedTweet(it)
+                    postTweet(it)
                 }
             }.joinAll()
     }
@@ -57,14 +57,14 @@ object Epgbird {
             .toList()
             .map {
                 launch {
-                    postRecordedTweet(it)
+                    postTweet(it)
                 }
             }.joinAll()
 
         lastRecordedId = maxId
     }
 
-    suspend fun checkReserves(includeRuleReserves: Boolean): Unit = coroutineScope {
+    suspend fun checkReserves(): Unit = coroutineScope {
         val response = EPGStationApi.getReserves()
         val maxId = response.reserves.maxOfOrNull { it.id } ?: return@coroutineScope
         if (lastReserveId == 0L) {
@@ -74,7 +74,7 @@ object Epgbird {
         response.reserves
             .asSequence()
             // ルール予約を含めるかどうか
-            .filter { includeRuleReserves || it.ruleId == null }
+            .filter { Env.INCLUDE_RULE_RESERVES || it.ruleId == null }
             // 無視するチャンネルの番組をスキップ
             .filter { it.channelId !in Env.IGNORE_CHANNEL_IDS }
             // ID チェック
@@ -82,65 +82,102 @@ object Epgbird {
             .toList()
             .map {
                 launch {
-                    postReserveTweet(it)
+                    postTweet(it)
                 }
             }.joinAll()
 
         lastReserveId = maxId
     }
 
-    private suspend fun postRecordedTweet(item: RecordedItem) {
-        // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
+    private suspend fun postTweet(item: ProgramItem) {
+        // 経過時間 (分)
         val elapsedMinute = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
+        // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
         if (item.isRecording && elapsedMinute % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
             return
         }
+        // TODO: 録画終了と録画中が被る
 
         logger.trace { item }
 
-        val text = buildString {
-            val recordType = if (item.ruleId == null) "手動" else "自動"
-            if (!item.isRecording) {
-                appendLine("【${recordType}録画完了】")
-            } else if (elapsedMinute == 0) {
-                appendLine("【${recordType}録画開始】")
-            } else {
-                appendLine("【${recordType}録画中 / ${elapsedMinute}分経過】")
+        val text = when {
+                // 予約追加
+                item.isReserve -> Env.RESERVES_FORMAT
+                // 録画開始
+                item.isRecording && elapsedMinute == 0 -> Env.RECORD_START_FORMAT
+                // 録画中
+                item.isRecording -> Env.RECORDING_FORMAT
+                // 録画完了
+                else -> Env.RECORD_END_FORMAT
+            // 改行文字
+            }.replace("%BR%") {
+                "\n"
+            // 予約のタイプ (ルール or 手動)
+            }.replace("%RESERVE_TYPE%") {
+                if (item.ruleId != null) {
+                    "ルール"
+                } else {
+                    "手動"
+                }
+            // 番組名
+            // 半角・全角かは USE_HALF_WIDTH 環境変数によりコントロール可能, 以下同様
+            }.replace("%NAME%") {
+                item.name
+            // チャンネル名, 同上
+            }.replace("%CHANNEL%") {
+                val channels = EPGStationApi.getChannels()
+                val channel = channels.find { it.id == item.channelId }
+
+                if (Env.USE_HALF_WIDTH) {
+                    channel?.halfWidthName
+                } else {
+                    channel?.name
+                }.orEmpty()
+            // 番組説明, 同上
+            // デフォルトは 50 文字まで出力するが DESCRIPTION_LENGTH 環境変数によりコントロール可能
+            }.replace("%DESCRIPTION%") {
+                "${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(Env.DESCRIPTION_LENGTH)
+            // 経過時間 (分)
+            // RESERVES_FORMAT で使用することは想定されていない
+            }.replace("%ELAPSED_MINUTES%") {
+                elapsedMinute.toString()
+            // 番組の開始時刻
+            // 時刻のフォーマットは TIME_FORMAT 環境変数によりコントロール可能
+            }.replace("%START_TIME%") {
+                val formatter = DateTimeFormatter.ofPattern(Env.TIME_FORMAT)
+                val startAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.startAt), ZoneOffset.systemDefault())
+                formatter.format(startAt)
+            // 番組の終了時刻, 同上
+            }.replace("%END_TIME%") {
+                val formatter = DateTimeFormatter.ofPattern(Env.TIME_FORMAT)
+                val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
+                formatter.format(endAt)
+            // 番組の長さ (xx時間xx分 形式)
+            }.replace("%DURATION%") {
+                val duration = (item.endAt - item.startAt).milliseconds
+                val hours = floor(duration.inHours).toInt()
+                val minutes =  duration.inMinutes.roundToInt() - hours * 60
+
+                buildString {
+                    if (hours > 0) {
+                        append("${hours}時間")
+                    }
+                    append("${minutes}分")
+                }
+            // 番組の容量 (GB 単位)
+            // 録画済でなければ空文字を出力
+            }.replace("%SIZE_GB%") {
+                val giga = 2.0.pow(30)
+                item.videoFiles.firstOrNull()?.size?.div(giga)?.let { String.format("%.1f", it) }.orEmpty()
             }
 
-            append("${item.name} ")
+        // 予約ならメディアを添付できないため, そのままツイートする
+        if (item.isReserve) {
+            postTweet(text, input = null, withMp4 = false, withPng = false, isRecording = false)
+            return
+        }
 
-            val channels = EPGStationApi.getChannels()
-            val channel = channels.find { it.id == item.channelId }
-            appendLine("[${channel?.halfWidthName}]")
-
-            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-            val startAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.startAt), ZoneOffset.systemDefault())
-            val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
-            append("${timeFormatter.format(startAt)} ~ ${timeFormatter.format(endAt)} ")
-
-            append("(")
-
-            val duration = (item.endAt - item.startAt).milliseconds
-            val hours = floor(duration.inHours).toInt()
-            val minutes =  duration.inMinutes.roundToInt() - hours * 60
-            if (hours > 0) {
-                append("${hours}時間")
-            }
-            append("${minutes}分")
-
-            // 録画済の場合
-            if (!item.isRecording) {
-                val gb = item.videoFiles.firstOrNull()?.size?.div(2.0.pow(30))?.let { String.format("%.1f", it) }
-                append(", ${gb ?: "??"} GB")
-            }
-
-            appendLine(")\n")
-
-            append("${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(50))
-        }.trimEnd()
-
-        // EPGStation は録画ファイルの絶対パスを持たないためマウントポイントから検索する
+        // EPGStation は録画ファイルの絶対パスを持たないため, マウントポイントから検索する
         val mnt = Paths.get(Env.MOUNT_POINT)
         val filename = item.videoFiles.firstOrNull()?.filename
         val input = filename?.let { epgsFilename ->
@@ -166,37 +203,32 @@ object Epgbird {
         )
     }
 
-    private suspend fun postReserveTweet(item: ReservelItem) {
-        logger.trace { item }
+    /**
+     * 出現した `pattern` を評価した block で置換する
+     *
+     * @param pattern 出現文字列
+     * @param block 遅延評価される置換文字列
+     */
+    private inline fun String.replace(pattern: String, block: () -> String): String {
+        if (!contains(pattern)) {
+            return this
+        }
 
-        val text = buildString {
-            val recordType = if (item.ruleId == null) "新規" else "ルール"
-            appendLine("【${recordType}予約追加】")
+        val value = block()
+        return replace(pattern, value)
+    }
 
-            append("${item.name} ")
-
-            val channels = EPGStationApi.getChannels()
-            val channel = channels.find { it.id == item.channelId }
-            appendLine("[${channel?.halfWidthName}]")
-
-            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-            val startAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.startAt), ZoneOffset.systemDefault())
-            val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
-            append("${timeFormatter.format(startAt)} ~ ${timeFormatter.format(endAt)} ")
-
-            append("(")
-            val duration = (item.endAt - item.startAt).milliseconds
-            val hours = floor(duration.inHours).toInt()
-            val minutes =  duration.inMinutes.roundToInt() - hours * 60
-            if (hours > 0) {
-                append("${hours}時間")
-            }
-            appendLine("${minutes}分)\n")
-
-            append("${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(50))
-        }.trimEnd()
-
-        postTweet(text, input = null, withMp4 = false, withPng = false, isRecording = false)
+    /**
+     * 文字列の長さを `limit` に制限し, 超えた場合には三点リーダ (…) を付与する
+     *
+     * @param limit 文字列の最大長
+     */
+    private fun String.omit(limit: Int): String {
+        return if (length > limit) {
+            take(limit) + "…"
+        } else {
+            this
+        }
     }
 
     /**
@@ -264,22 +296,14 @@ object Epgbird {
             }
         }
 
-        try {
-            if (Env.DRYRUN) {
-                return
-            }
+        if (Env.DRYRUN) {
+            return
+        }
 
+        try {
             EpgbirdTwitterClient.statuses.create(text).execute()
         } catch (t: Throwable) {
             logger.error(t) { "Failed to create status." }
-        }
-    }
-
-    private fun String.omit(limit: Int): String {
-        return if (length > limit) {
-            take(limit) + "…"
-        } else {
-            this
         }
     }
 }
