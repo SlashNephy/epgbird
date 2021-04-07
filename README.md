@@ -82,6 +82,9 @@ services:
       #   %SIZE_GB%: 番組の容量 (GB 単位, RECORD_END_FORMAT 以外で使用することは想定されていない)
       #   %COMMENT_DIGEST%: コメントのダイジェスト (saya が必要)
       #   %COMMENT_FORCE%: コメントの勢い (/min), 同上
+      #   %DROP_COUNT%: ドロップ数
+      #   %ERROR_COUNT%: エラー数
+      #   %SCRAMBLE_COUNT%: スクランブル数
       RESERVES_FORMAT: 【%RESERVE_TYPE%予約追加】%BR%%NAME% [%CHANNEL%]%BR%%START_TIME% ~ %END_TIME% (%DURATION%)%BR%%BR%%DESCRIPTION%
       RECORD_START_FORMAT: 【%RESERVE_TYPE%録画開始】%BR%%NAME% [%CHANNEL%]%BR%%START_TIME% ~ %END_TIME% (%DURATION%)%BR%%BR%%DESCRIPTION%
       RECORDING_FORMAT: 【%RESERVE_TYPE%録画中 / %ELAPSED_MINUTES%分経過】%BR%%NAME% [%CHANNEL%]%BR%%START_TIME% ~ %END_TIME% (%DURATION%)%BR%%BR%%DESCRIPTION%

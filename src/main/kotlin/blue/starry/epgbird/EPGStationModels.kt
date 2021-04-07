@@ -31,6 +31,7 @@ interface ProgramItem {
     val extended: String?
     val videoFiles: List<RecordedItem.VideoFile>
     val ruleId: Long?
+    val dropLogFile: RecordedItem.DropLogFile?
 }
 
 @Serializable
@@ -59,7 +60,7 @@ data class RecordedItem(
     override val isRecording: Boolean,
     val thumbnails: List<Long> = emptyList(),
     override val videoFiles: List<VideoFile> = emptyList(),
-    val dropLogFile: DropLogFile? = null,
+    override val dropLogFile: DropLogFile? = null,
     val tags: List<RecordedTag> = emptyList(),
     val isEncoding: Boolean,
     val isProtected: Boolean
@@ -137,6 +138,7 @@ data class ReservelItem(
     override val isRecording = false
     override val isReserve = true
     override val videoFiles = emptyList<RecordedItem.VideoFile>()
+    override val dropLogFile: RecordedItem.DropLogFile? = null
 }
 
 @Serializable

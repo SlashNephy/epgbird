@@ -108,6 +108,15 @@ class TemplateFormatter(private val item: ProgramItem) {
             // コメントの勢い (/min), 同上
             }.replace("%COMMENT_FORCE%") {
                 getComment()?.force
+            // ドロップ数
+            }.replace("%DROP_COUNT%") {
+                item.dropLogFile?.dropCnt
+            // エラー数
+            }.replace("%ERROR_COUNT%") {
+                item.dropLogFile?.errorCnt
+            // スクランブル数
+            }.replace("%SCRAMBLE_COUNT%") {
+                item.dropLogFile?.scramblingCnt
             }
 
         return text.trim()
