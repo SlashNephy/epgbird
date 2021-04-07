@@ -119,7 +119,7 @@ object Epgbird {
             val filename = item.videoFiles.firstOrNull()?.filename
             val input = filename?.let { epgsFilename ->
                 withContext(Dispatchers.IO) {
-                    Files.find(mnt, 2, { path, _ ->
+                    Files.find(mnt, Env.MOUNT_POINT_MAX_DEPTH, { path, _ ->
                         path.name == epgsFilename
                     }).findFirst().orElse(null)
                 }

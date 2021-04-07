@@ -7,6 +7,7 @@ object Env {
     val LOG_LEVEL by stringOrNull
     val DRYRUN by boolean { false }
     val MOUNT_POINT by string { "/mnt" }
+    val MOUNT_POINT_MAX_DEPTH by int { 2 }
 
     val INCLUDE_RESERVES by boolean { true }
     val INCLUDE_RULE_RESERVES by boolean { false }
