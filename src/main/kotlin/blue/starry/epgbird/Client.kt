@@ -14,7 +14,9 @@ import io.ktor.http.*
 val EpgbirdHttpClient by lazy {
     HttpClient {
         install(JsonFeature) {
-            serializer = KotlinxSerializer()
+            serializer = KotlinxSerializer(kotlinx.serialization.json.Json {
+                ignoreUnknownKeys = true
+            })
         }
 
         defaultRequest {
