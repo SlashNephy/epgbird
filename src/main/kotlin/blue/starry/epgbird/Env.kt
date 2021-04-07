@@ -38,6 +38,7 @@ object Env {
     val EPGSTATION_PORT by int { 8888 }
     val SAYA_HOST by string { "saya" }
     val SAYA_PORT by int { 1017 }
+    val SAYA_BASE_URI by string { "/" }
 
     val TWITTER_CK by string
     val TWITTER_CS by string
