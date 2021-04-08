@@ -1,5 +1,6 @@
 package blue.starry.epgbird
 
+import com.twitter.twittertext.TwitterTextParser
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -44,7 +45,7 @@ class TemplateFormatter(private val item: ProgramItem) {
             else -> Env.RECORD_END_FORMAT
         }
 
-        val text = template
+        var text = template
             // 改行文字
             .replace("%BR%") {
                 "\n"
@@ -117,9 +118,13 @@ class TemplateFormatter(private val item: ProgramItem) {
             // スクランブル数
             }.replace("%SCRAMBLE_COUNT%") {
                 item.dropLogFile?.scramblingCnt
-            }
+            }.trim()
 
-        return text.trim()
+        while (!TwitterTextParser.parseTweet(text).isValid) {
+            text = text.dropLast(1)
+        }
+
+        return text
     }
 
     /**
