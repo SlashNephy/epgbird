@@ -32,6 +32,9 @@ interface ProgramItem {
     val videoFiles: List<RecordedItem.VideoFile>
     val ruleId: Long?
     val dropLogFile: RecordedItem.DropLogFile?
+    val videoType: String?
+    val videoResolution: String?
+    val audioSamplingRate: Int?
 }
 
 @Serializable
@@ -51,11 +54,11 @@ data class RecordedItem(
     val subGenre2: Int? = null,
     val genre3: Int? = null,
     val subGenre3: Int? = null,
-    val videoType: String? = null,
-    val videoResolution: String? = null,
+    override val videoType: String? = null,
+    override val videoResolution: String? = null,
     val videoStreamContent: Int? = null,
     val videoComponentType: Int? = null,
-    val audioSamplingRate: Int? = null,
+    override val audioSamplingRate: Int? = null,
     val audioComponentType: Int? = null,
     override val isRecording: Boolean,
     val thumbnails: List<Long> = emptyList(),
@@ -128,11 +131,11 @@ data class ReservelItem(
     val subGenre2: Int? = null,
     val genre3: Int? = null,
     val subGenre3: Int? = null,
-    val videoType: String? = null,
-    val videoResolution: String? = null,
+    override val videoType: String? = null,
+    override val videoResolution: String? = null,
     val videoStreamContent: Int? = null,
     val videoComponentType: Int? = null,
-    val audioSamplingRate: Int? = null,
+    override val audioSamplingRate: Int? = null,
     val audioComponentType: Int? = null
 ): ProgramItem {
     override val isRecording = false

@@ -118,6 +118,15 @@ class TemplateFormatter(private val item: ProgramItem) {
             // スクランブル数
             }.replace("%SCRAMBLE_COUNT%") {
                 item.dropLogFile?.scramblingCnt
+            // 映像のコーデック
+            }.replace("%VIDEO_CODEC%") {
+                item.videoType?.toUpperCase()
+            // 映像の解像度
+            }.replace("%VIDEO_RESOLUTION%") {
+                item.videoResolution
+            // 音声のサンプリング周波数 (kHz)
+            }.replace("%AUDIO_SAMPLING_RATE_KHZ%") {
+                item.audioSamplingRate?.div(1000.0F)
             }.trim()
 
         while (!TwitterTextParser.parseTweet(text).isValid) {

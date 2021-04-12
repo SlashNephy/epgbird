@@ -85,6 +85,9 @@ services:
       #   %DROP_COUNT%: ドロップ数
       #   %ERROR_COUNT%: エラー数
       #   %SCRAMBLE_COUNT%: スクランブル数
+      #   %VIDEO_CODEC%: 映像のコーデック, MPEG2 or H.264 or H.265
+      #   %VIDEO_RESOLUTION%: 映像の解像度, e.g. 1080p, 720p
+      #   %AUDIO_SAMPLING_RATE_KHZ%: 音声のサンプリング周波数 (kHz), e.g. 4.8, 4.41
       RESERVES_FORMAT: 【%RESERVE_TYPE%予約追加】%BR%%NAME% [%CHANNEL%]%BR%%START_TIME% ~ %END_TIME% (%DURATION%)%BR%%BR%%DESCRIPTION%
       RECORD_START_FORMAT: 【%RESERVE_TYPE%録画開始】%BR%%NAME% [%CHANNEL%]%BR%%START_TIME% ~ %END_TIME% (%DURATION%)%BR%%BR%%DESCRIPTION%
       RECORDING_FORMAT: 【%RESERVE_TYPE%録画中 / %ELAPSED_MINUTES%分経過】%BR%%NAME% [%CHANNEL%]%BR%%START_TIME% ~ %END_TIME% (%DURATION%)%BR%%BR%%DESCRIPTION%
