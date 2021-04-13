@@ -11,16 +11,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.io.path.name
-import kotlin.math.floor
-import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.time.milliseconds
-import kotlin.time.seconds
 
 @Suppress("BlockingMethodInNonBlockingContext")
 object Epgbird {
@@ -32,9 +26,25 @@ object Epgbird {
             .records
             // 無視するチャンネルの番組をスキップ
             .filter { it.channelId !in Env.IGNORE_CHANNEL_IDS }
-            .map {
+            .map { item ->
                 launch {
-                    postRecordedTweet(it)
+                    // 経過時間 (分)
+                    val elapsedMinutes = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
+                    // 番組の長さ (分)
+                    val totalMinutes = (item.endAt - item.startAt).milliseconds.inMinutes.roundToInt()
+
+                    // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
+                    if (item.isRecording && elapsedMinutes % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
+                        return@launch
+                    }
+
+                    // 番組の長さだけ録画した場合には無視
+                    // ex) 30分番組で【30分録画中】とならないようにする
+                    if (item.isRecording && elapsedMinutes == totalMinutes) {
+                        return@launch
+                    }
+
+                    postTweet(item)
                 }
             }.joinAll()
     }
@@ -55,16 +65,16 @@ object Epgbird {
             // ID チェック
             .filter { lastRecordedId < it.id }
             .toList()
-            .map {
+            .map { item ->
                 launch {
-                    postRecordedTweet(it)
+                    postTweet(item)
                 }
             }.joinAll()
 
         lastRecordedId = maxId
     }
 
-    suspend fun checkReserves(includeRuleReserves: Boolean): Unit = coroutineScope {
+    suspend fun checkReserves(): Unit = coroutineScope {
         val response = EPGStationApi.getReserves()
         val maxId = response.reserves.maxOfOrNull { it.id } ?: return@coroutineScope
         if (lastReserveId == 0L) {
@@ -74,128 +84,55 @@ object Epgbird {
         response.reserves
             .asSequence()
             // ルール予約を含めるかどうか
-            .filter { includeRuleReserves || it.ruleId == null }
+            .filter { Env.INCLUDE_RULE_RESERVES || it.ruleId == null }
             // 無視するチャンネルの番組をスキップ
             .filter { it.channelId !in Env.IGNORE_CHANNEL_IDS }
             // ID チェック
             .filter { lastReserveId < it.id }
             .toList()
-            .map {
+            .map { item ->
                 launch {
-                    postReserveTweet(it)
+                    postTweet(item)
                 }
             }.joinAll()
 
         lastReserveId = maxId
     }
 
-    private suspend fun postRecordedTweet(item: RecordedItem) {
-        // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
-        val elapsedMinute = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
-        if (item.isRecording && elapsedMinute % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
-            return
-        }
-
+    private suspend fun postTweet(item: ProgramItem) {
         logger.trace { item }
 
-        val text = buildString {
-            val recordType = if (item.ruleId == null) "手動" else "自動"
-            if (!item.isRecording) {
-                appendLine("【${recordType}録画完了】")
-            } else if (elapsedMinute == 0) {
-                appendLine("【${recordType}録画開始】")
-            } else {
-                appendLine("【${recordType}録画中 / ${elapsedMinute}分経過】")
+        val text = TemplateFormatter(item).format()
+
+        // 予約ならメディアを添付できないため, そのままツイートする
+        if (item.isReserve) {
+            postTweet(
+                text = text,
+                input = null,
+                withMp4 = false,
+                withPng = false,
+                isRecording = false
+            )
+        } else {
+            // EPGStation は録画ファイルの絶対パスを持たないため, マウントポイントから検索する
+            val mnt = Paths.get(Env.MOUNT_POINT)
+            val filename = item.videoFiles.firstOrNull()?.filename
+            val input = filename?.let { epgsFilename ->
+                withContext(Dispatchers.IO) {
+                    Files.find(mnt, Env.MOUNT_POINT_MAX_DEPTH, { path, _ ->
+                        path.name == epgsFilename
+                    }).findFirst().orElse(null)
+                }
             }
 
-            append("${item.name} ")
-
-            val channels = EPGStationApi.getChannels()
-            val channel = channels.find { it.id == item.channelId }
-            appendLine("[${channel?.halfWidthName}]")
-
-            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-            val startAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.startAt), ZoneOffset.systemDefault())
-            val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
-            append("${timeFormatter.format(startAt)} ~ ${timeFormatter.format(endAt)} ")
-
-            append("(")
-
-            val duration = (item.endAt - item.startAt).milliseconds
-            val (hours, minutes) = floor(duration.inHours).toInt() to duration.inMinutes.roundToInt()
-            if (hours > 0) {
-                append("${hours}時間")
-            }
-            append("${minutes}分")
-
-            // 録画済の場合
-            if (!item.isRecording) {
-                val gb = item.videoFiles.firstOrNull()?.size?.div(2.0.pow(30))?.let { String.format("%.1f", it) }
-                append(", ${gb ?: "??"} GB")
-            }
-
-            appendLine(")\n")
-
-            append("${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(50))
-        }.trimEnd()
-
-        // EPGStation は録画ファイルの絶対パスを持たないためマウントポイントから検索する
-        val mnt = Paths.get(Env.MOUNT_POINT)
-        val filename = item.videoFiles.firstOrNull()?.filename
-        val input = filename?.let { epgsFilename ->
-            withContext(Dispatchers.IO) {
-                Files.find(mnt, 2, { path, _ ->
-                    path.name == epgsFilename
-                }).findFirst().orElse(null)
-            }
+            postTweet(
+                text = text,
+                input = input,
+                withMp4 = Env.WITH_MP4,
+                withPng = Env.WITH_PNG,
+                isRecording = item.isRecording
+            )
         }
-
-        // チューナーの準備が整うまで待機
-        if (input != null && elapsedMinute == 0) {
-            delay(3.seconds)
-        }
-
-        postTweet(
-            text = text,
-            input = input,
-            // 録画開始直後は mp4 を生成できない
-            withMp4 = elapsedMinute > 0 && Env.WITH_MP4,
-            withPng = Env.WITH_PNG,
-            isRecording = item.isRecording
-        )
-    }
-
-    private suspend fun postReserveTweet(item: ReservelItem) {
-        logger.trace { item }
-
-        val text = buildString {
-            val recordType = if (item.ruleId == null) "新規" else "ルール"
-            appendLine("【${recordType}予約追加】")
-
-            append("${item.name} ")
-
-            val channels = EPGStationApi.getChannels()
-            val channel = channels.find { it.id == item.channelId }
-            appendLine("[${channel?.halfWidthName}]")
-
-            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-            val startAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.startAt), ZoneOffset.systemDefault())
-            val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
-            append("${timeFormatter.format(startAt)} ~ ${timeFormatter.format(endAt)} ")
-
-            append("(")
-            val duration = (item.endAt - item.startAt).milliseconds
-            val hours = floor(duration.inHours).toInt()
-            val minutes =  duration.inMinutes.roundToInt() - hours * 60
-            if (hours > 0) {
-                append("${hours}時間")
-            }
-            appendLine("${minutes}分)\n")
-
-            append("${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(50))
-        }.trimEnd()
-
-        postTweet(text, input = null, withMp4 = false, withPng = false, isRecording = false)
     }
 
     /**
@@ -209,10 +146,10 @@ object Epgbird {
      */
     private suspend fun postTweet(
         text: String,
-        input: Path? = null,
-        withMp4: Boolean = false,
-        withPng: Boolean = false,
-        isRecording: Boolean = false
+        input: Path?,
+        withMp4: Boolean,
+        withPng: Boolean,
+        isRecording: Boolean
     ) {
         if (withMp4 && input != null) {
             val mp4 = Files.createTempFile(UUID.randomUUID().toString(), ".mp4")
@@ -263,22 +200,14 @@ object Epgbird {
             }
         }
 
-        try {
-            if (Env.DRYRUN) {
-                return
-            }
+        if (Env.DRYRUN) {
+            return
+        }
 
+        try {
             EpgbirdTwitterClient.statuses.create(text).execute()
         } catch (t: Throwable) {
             logger.error(t) { "Failed to create status." }
-        }
-    }
-
-    private fun String.omit(limit: Int): String {
-        return if (length > limit) {
-            take(limit) + "…"
-        } else {
-            this
         }
     }
 }

@@ -16,7 +16,7 @@ suspend fun main(): Unit = coroutineScope {
 
 private fun CoroutineScope.watchRecording() = launch {
     while (isActive) {
-        if (Env.INCLUDE_RECORDING) {
+        if (Env.INCLUDE_RECORDING || Env.INCLUDE_RECORD_START) {
             Epgbird.checkRecording()
         }
 
@@ -28,13 +28,13 @@ private fun CoroutineScope.watchRecordedOrReserves() = launch {
     while (isActive) {
         listOf(
             launch {
-                if (Env.INCLUDE_RECORDED) {
+                if (Env.INCLUDE_RECORD_END) {
                     Epgbird.checkRecorded()
                 }
             },
             launch {
                 if (Env.INCLUDE_RESERVES) {
-                    Epgbird.checkReserves(Env.INCLUDE_RULE_RESERVES)
+                    Epgbird.checkReserves()
                 }
             }
         ).joinAll()

@@ -10,6 +10,7 @@ plugins {
 
 object Versions {
     const val Penicillin = "6.1.0"
+    const val TwitterText = "3.1.0"
     const val Ktor = "1.5.2"
 
     const val KotlinLogging = "2.0.4"
@@ -21,6 +22,7 @@ object Versions {
 
 object Libraries {
     const val Penicillin = "blue.starry:penicillin:${Versions.Penicillin}"
+    const val TwitterText = "com.twitter.twittertext:twitter-text:${Versions.TwitterText}"
     const val KtorClientCIO = "io.ktor:ktor-client-cio:${Versions.Ktor}"
     const val KtorClientSerialization = "io.ktor:ktor-client-serialization:${Versions.Ktor}"
 
@@ -46,6 +48,7 @@ repositories {
 
 dependencies {
     implementation(Libraries.Penicillin)
+    implementation(Libraries.TwitterText)
     implementation(Libraries.KtorClientCIO)
     implementation(Libraries.KtorClientSerialization)
 
