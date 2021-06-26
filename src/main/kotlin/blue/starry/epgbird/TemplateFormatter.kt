@@ -5,10 +5,12 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.*
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlin.time.milliseconds
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
 
 class TemplateFormatter(private val item: ProgramItem) {
     private var _channel: ChannelItem? = null
@@ -30,101 +32,76 @@ class TemplateFormatter(private val item: ProgramItem) {
         return _comment
     }
 
-    suspend fun format(): String {
-        // 経過時間 (分)
-        val elapsedMinutes = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
-
-        val template = when {
-            // 予約追加
-            item.isReserve -> Env.RESERVES_FORMAT
-            // 録画開始
-            item.isRecording && elapsedMinutes == 0 -> Env.RECORD_START_FORMAT
-            // 録画中
-            item.isRecording -> Env.RECORDING_FORMAT
-            // 録画完了
+    suspend fun format(): String { // 経過時間 (分)
+        val elapsedMinutes = Duration.milliseconds((Instant.now().toEpochMilli() - item.startAt)).toDouble(DurationUnit.MINUTES).roundToInt()
+        val template = when { // 予約追加
+            item.isReserve -> Env.RESERVES_FORMAT // 録画開始
+            item.isRecording && elapsedMinutes == 0 -> Env.RECORD_START_FORMAT // 録画中
+            item.isRecording -> Env.RECORDING_FORMAT // 録画完了
             else -> Env.RECORD_END_FORMAT
         }
-
-        var text = template
-            // 改行文字
+        var text = template // 改行文字
             .replace("%BR%") {
-                "\n"
-            // 予約のタイプ (ルール or 手動)
+                "\n" // 予約のタイプ (ルール or 手動)
             }.replace("%RESERVE_TYPE%") {
                 if (item.ruleId != null) {
                     "ルール"
                 } else {
                     "手動"
-                }
-            // 番組名
-            // 半角・全角かは USE_HALF_WIDTH 環境変数によりコントロール可能, 以下同様
+                } // 番組名
+                // 半角・全角かは USE_HALF_WIDTH 環境変数によりコントロール可能, 以下同様
             }.replace("%NAME%") {
-                item.name
-            // チャンネル名, 同上
+                item.name // チャンネル名, 同上
             }.replace("%CHANNEL%") {
                 if (Env.USE_HALF_WIDTH) {
                     getChannel()?.halfWidthName
                 } else {
                     getChannel()?.name
-                }
-            // 番組説明, 同上
-            // デフォルトは 50 文字まで出力するが DESCRIPTION_LENGTH 環境変数によりコントロール可能
+                } // 番組説明, 同上
+                // デフォルトは 50 文字まで出力するが DESCRIPTION_LENGTH 環境変数によりコントロール可能
             }.replace("%DESCRIPTION%") {
-                "${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(Env.DESCRIPTION_LENGTH)
-            // 経過時間 (分)
-            // RESERVES_FORMAT で使用することは想定されていない
+                "${item.description.orEmpty()}\n${item.extended.orEmpty()}".trim().omit(Env.DESCRIPTION_LENGTH) // 経過時間 (分)
+                // RESERVES_FORMAT で使用することは想定されていない
             }.replace("%ELAPSED_MINUTES%") {
-                elapsedMinutes
-            // 番組の開始時刻
-            // 時刻のフォーマットは TIME_FORMAT 環境変数によりコントロール可能
+                elapsedMinutes // 番組の開始時刻
+                // 時刻のフォーマットは TIME_FORMAT 環境変数によりコントロール可能
             }.replace("%START_TIME%") {
                 val formatter = DateTimeFormatter.ofPattern(Env.TIME_FORMAT)
                 val startAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.startAt), ZoneOffset.systemDefault())
-                formatter.format(startAt)
-            // 番組の終了時刻, 同上
+                formatter.format(startAt) // 番組の終了時刻, 同上
             }.replace("%END_TIME%") {
                 val formatter = DateTimeFormatter.ofPattern(Env.TIME_FORMAT)
                 val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
-                formatter.format(endAt)
-            // 番組の長さ (xx時間xx分 形式)
+                formatter.format(endAt) // 番組の長さ (xx時間xx分 形式)
             }.replace("%DURATION%") {
-                val duration = (item.endAt - item.startAt).milliseconds
-                val hours = floor(duration.inHours).toInt()
-                val minutes =  duration.inMinutes.roundToInt() - hours * 60
+                val duration = Duration.milliseconds((item.endAt - item.startAt))
+                val hours = floor(duration.toDouble(DurationUnit.HOURS)).toInt()
+                val minutes = duration.toDouble(DurationUnit.MINUTES).roundToInt() - hours * 60
 
                 buildString {
                     if (hours > 0) {
                         append("${hours}時間")
                     }
                     append("${minutes}分")
-                }
-            // 番組の容量 (GB 単位)
-            // 録画済でなければ空文字を出力
+                } // 番組の容量 (GB 単位)
+                // 録画済でなければ空文字を出力
             }.replace("%SIZE_GB%") {
                 val giga = 2.0.pow(30)
-                item.videoFiles.firstOrNull()?.size?.div(giga)?.let { String.format("%.1f", it) }
-            // コメントのダイジェスト (saya が必要)
+                item.videoFiles.firstOrNull()?.size?.div(giga)?.let { String.format("%.1f", it) } // コメントのダイジェスト (saya が必要)
             }.replace("%COMMENT_DIGEST%") {
-                getComment()?.last
-            // コメントの勢い (/min), 同上
+                getComment()?.last // コメントの勢い (/min), 同上
             }.replace("%COMMENT_FORCE%") {
-                getComment()?.force
-            // ドロップ数
+                getComment()?.force // ドロップ数
             }.replace("%DROP_COUNT%") {
-                item.dropLogFile?.dropCnt
-            // エラー数
+                item.dropLogFile?.dropCnt // エラー数
             }.replace("%ERROR_COUNT%") {
-                item.dropLogFile?.errorCnt
-            // スクランブル数
+                item.dropLogFile?.errorCnt // スクランブル数
             }.replace("%SCRAMBLE_COUNT%") {
-                item.dropLogFile?.scramblingCnt
-            // 映像のコーデック
+                item.dropLogFile?.scramblingCnt // 映像のコーデック
             }.replace("%VIDEO_CODEC%") {
-                item.videoType?.toUpperCase()
-            // 映像の解像度
+                item.videoType?.uppercase(Locale.getDefault()) // 映像の解像度
             }.replace("%VIDEO_RESOLUTION%") {
-                item.videoResolution
-            // 音声のサンプリング周波数 (kHz)
+                item.videoResolution // 音声のサンプリング周波数 (kHz)
             }.replace("%AUDIO_SAMPLING_RATE_KHZ%") {
                 item.audioSamplingRate?.div(1000.0F)
             }.trim()

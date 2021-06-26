@@ -2,8 +2,7 @@ package blue.starry.epgbird
 
 import kotlinx.coroutines.*
 import mu.KotlinLogging
-import kotlin.time.minutes
-import kotlin.time.seconds
+import kotlin.time.Duration
 
 val logger = KotlinLogging.createFeedchimeLogger("epgbird")
 
@@ -20,7 +19,7 @@ private fun CoroutineScope.watchRecording() = launch {
             Epgbird.checkRecording()
         }
 
-        delay(1.minutes)
+        delay(Duration.minutes(1))
     }
 }
 
@@ -39,6 +38,6 @@ private fun CoroutineScope.watchRecordedOrReserves() = launch {
             }
         ).joinAll()
 
-        delay(Env.CHECK_INTERVAL_SECONDS.seconds)
+        delay(Duration.seconds(Env.CHECK_INTERVAL_SECONDS))
     }
 }
