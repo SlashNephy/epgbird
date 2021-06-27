@@ -63,7 +63,7 @@ kotlin {
     target {
         compilations.all {
             kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_1_8.toString()
+                jvmTarget = JavaVersion.VERSION_11.toString()
                 apiVersion = "1.5"
                 languageVersion = "1.5"
                 allWarningsAsErrors = true
