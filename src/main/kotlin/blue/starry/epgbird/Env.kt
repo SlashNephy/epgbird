@@ -28,7 +28,7 @@ object Env {
     val IGNORE_CHANNEL_IDS by longList
 
     val WITH_PNG by boolean { false }
-    val FFMPEG_PNG_COMMAND by string { "ffmpeg %POSITION% -i %INPUT% -vframes 1 -f image2 -s 1920x1080 -loglevel error -y %OUTPUT%" }
+    val FFMPEG_PNG_COMMAND by string { "ffmpeg %POSITION% -i %INPUT% -vf yadif -vframes 1 -f image2 -s 1920x1080 -loglevel error -y %OUTPUT%" }
     val FFMPEG_PNG_TIMEOUT_SECONDS by long { 5 }
 
     val WITH_MP4 by boolean { false }
