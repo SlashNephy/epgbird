@@ -1,34 +1,32 @@
-# Gradle Cache Dependencies Stage
-## This stage caches plugin/project dependencies from *.gradle.kts and gradle.properties.
-## Gradle image erases GRADLE_USER_HOME each layer. So we need COPY GRADLE_USER_HOME.
-## Refer https://stackoverflow.com/a/59022743
-FROM --platform=$BUILDPLATFORM gradle:jdk8 AS cache
+FROM --platform=$BUILDPLATFORM gradle:7.4.2-jdk17 AS cache
 WORKDIR /app
 ENV GRADLE_USER_HOME /app/gradle
 COPY *.gradle.kts gradle.properties /app/
-## Full build if there are any deps changes
-RUN gradle shadowJar --parallel --no-daemon --quiet
+RUN gradle shadowJar --parallel --console=verbose
 
-# Gradle Build Stage
-## This stage builds and generates fat jar.
-FROM --platform=$BUILDPLATFORM gradle:jdk8 AS build
+FROM --platform=$BUILDPLATFORM gradle:7.4.2-jdk17 AS build
 WORKDIR /app
 COPY --from=cache /app/gradle /home/gradle/.gradle
 COPY *.gradle.kts gradle.properties /app/
 COPY src/main/ /app/src/main/
-## Stop printing Welcome
-RUN gradle -version > /dev/null \
-    && gradle shadowJar --parallel --no-daemon
+RUN gradle shadowJar --parallel --console=verbose
 
 # Final Stage
-FROM --platform=$TARGETPLATFORM adoptopenjdk:11-jre-hotspot
+FROM amazoncorretto:18.0.1 as runtime
 
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ffmpeg \
-        tzdata \
-    && rm -rf /var/lib/apt/lists/*
+#RUN cd /opt \
+#    && mkdir ffmpeg \
+#    && cd ffmpeg \
+#    && yum install -y tar xz \
+#    && curl -O https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+#    && tar -xf ffmpeg-release-amd64-static.tar.xz --strip-components=1 \
+#    && rm -f ffmpeg-release-amd64-static.tar.xz \
+#    && yum remove -y tar xz \
+#    && yum clean all \
+#    && rm -rf /var/cache/yum
+#ENV PATH="/opt/ffmpeg:$PATH"
+COPY ./.github/workflows/ffmpeg /usr/bin/
+RUN chmod +x /usr/bin/ffmpeg
 
 COPY --from=build /app/build/libs/epgbird-all.jar /app/epgbird.jar
 

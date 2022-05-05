@@ -13,8 +13,7 @@ import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
 import kotlin.io.path.name
-import kotlin.math.roundToInt
-import kotlin.time.milliseconds
+import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("BlockingMethodInNonBlockingContext")
 object Epgbird {
@@ -27,18 +26,12 @@ object Epgbird {
             // 無視するチャンネルの番組をスキップ
             .filter { it.channelId !in Env.IGNORE_CHANNEL_IDS }
             .map { item ->
-                launch {
-                    // 経過時間 (分)
-                    val elapsedMinutes = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inMinutes.roundToInt()
-                    // 番組の長さ (分)
-                    val totalMinutes = (item.endAt - item.startAt).milliseconds.inMinutes.roundToInt()
-
-                    // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
-                    if (item.isRecording && elapsedMinutes % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
+                launch { // 経過時間 (分)
+                    val elapsedMinutes = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inWholeMinutes // 番組の長さ (分)
+                    val totalMinutes = (item.endAt - item.startAt).milliseconds.inWholeMinutes // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
+                    if (item.isRecording && elapsedMinutes % Env.RECORDING_POST_FREQUENCY_MINUTES != 0L) {
                         return@launch
-                    }
-
-                    // 番組の長さだけ録画した場合には無視
+                    } // 番組の長さだけ録画した場合には無視
                     // ex) 30分番組で【30分録画中】とならないようにする
                     if (item.isRecording && elapsedMinutes == totalMinutes) {
                         return@launch
@@ -161,12 +154,14 @@ object Epgbird {
                     return
                 }
 
-                EpgbirdTwitterClient.statuses.createWithMedia(
-                    status = text,
-                    media = listOf(
-                        MediaComponent(mp4, MediaType.MP4, MediaCategory.TweetVideo)
-                    )
-                ).execute()
+                EpgbirdTwitterClient.use { client ->
+                    client.statuses.createWithMedia(
+                        status = text,
+                        media = listOf(
+                            MediaComponent(mp4, MediaType.MP4, MediaCategory.TweetVideo)
+                        )
+                    ).execute()
+                }
 
                 return
             } catch (t: Throwable) {
@@ -188,7 +183,9 @@ object Epgbird {
                     return
                 }
 
-                EpgbirdTwitterClient.statuses.createWithMedia(text, media = listOf(MediaComponent(png, MediaType.PNG, MediaCategory.TweetImage))).execute()
+                EpgbirdTwitterClient.use { client ->
+                    client.statuses.createWithMedia(text, media = listOf(MediaComponent(png, MediaType.PNG, MediaCategory.TweetImage))).execute()
+                }
 
                 return
             } catch (t: Throwable) {
@@ -205,7 +202,9 @@ object Epgbird {
         }
 
         try {
-            EpgbirdTwitterClient.statuses.create(text).execute()
+            EpgbirdTwitterClient.use { client ->
+                client.statuses.create(text).execute()
+            }
         } catch (t: Throwable) {
             logger.error(t) { "Failed to create status." }
         }

@@ -1,5 +1,6 @@
 package blue.starry.epgbird
 
+import java.util.*
 import kotlin.properties.ReadOnlyProperty
 
 object Env {
@@ -31,8 +32,8 @@ object Env {
     val FFMPEG_PNG_TIMEOUT_SECONDS by long { 5 }
 
     val WITH_MP4 by boolean { false }
-    val FFMPEG_MP4_COMMAND by string { "ffmpeg %POSITION% -t 120 -i %INPUT% -f mp4 -c:a aac -ab 128k -ar 48000 -ac 2 -c:v libx264 -pix_fmt yuv420p -vf scale=1280:-1 -vb 2048k -r 30 -minrate 1024k -maxrate 2048k -strict experimental -threads 1 -loglevel error -y %OUTPUT%" }
-    val FFMPEG_MP4_TIMEOUT_SECONDS by long { 30 }
+    val FFMPEG_MP4_COMMAND by string { "ffmpeg %POSITION% -t 120 -dual_mono_mode main -i %INPUT% -f mp4 -c:a aac -ab 128k -ar 48000 -ac 2 -vf yadif,scale=1280:-1 -c:v libx264 -x264-params crf=16 -pix_fmt yuv420p -color_primaries bt709 -color_trc bt709 -colorspace bt709 -color_range tv -r 30 -threads 1 -loglevel error -y %OUTPUT%" }
+    val FFMPEG_MP4_TIMEOUT_SECONDS by long { 60 }
 
     val EPGSTATION_HOST by string { "epgstation" }
     val EPGSTATION_PORT by int { 8888 }
@@ -54,7 +55,7 @@ private fun String?.toBooleanFuzzy(): Boolean {
     return when (this) {
         null -> false
         "1", "yes" -> true
-        else -> toLowerCase().toBoolean()
+        else -> lowercase(Locale.getDefault()).toBoolean()
     }
 }
 

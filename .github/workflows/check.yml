@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Using Caches
-        uses: actions/cache@v3.0.2
+        uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -28,8 +28,8 @@ jobs:
       - name: Setup JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: 8
+          distribution: 'corretto'
+          java-version: 17
 
       - name: Grant Execute Permission to gradlew
         run: chmod +x gradlew
