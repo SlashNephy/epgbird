@@ -14,17 +14,19 @@ RUN gradle shadowJar --parallel --console=verbose
 # Final Stage
 FROM amazoncorretto:18.0.1 as runtime
 
-RUN cd /opt \
-    && mkdir ffmpeg \
-    && cd ffmpeg \
-    && yum install -y tar xz \
-    && curl -O https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
-    && tar -xf ffmpeg-release-amd64-static.tar.xz --strip-components=1 \
-    && rm -f ffmpeg-release-amd64-static.tar.xz \
-    && yum remove -y tar xz \
-    && yum clean all \
-    && rm -rf /var/cache/yum
-ENV PATH="/opt/ffmpeg:$PATH"
+#RUN cd /opt \
+#    && mkdir ffmpeg \
+#    && cd ffmpeg \
+#    && yum install -y tar xz \
+#    && curl -O https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+#    && tar -xf ffmpeg-release-amd64-static.tar.xz --strip-components=1 \
+#    && rm -f ffmpeg-release-amd64-static.tar.xz \
+#    && yum remove -y tar xz \
+#    && yum clean all \
+#    && rm -rf /var/cache/yum
+#ENV PATH="/opt/ffmpeg:$PATH"
+COPY ./.github/workflows/ffmpeg /usr/bin/
+RUN chmod +x /usr/bin/ffmpeg
 
 COPY --from=build /app/build/libs/epgbird-all.jar /app/epgbird.jar
 
