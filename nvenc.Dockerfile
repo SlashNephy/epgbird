@@ -1,4 +1,6 @@
-FROM slashnephy/epgbird AS image
+ARG IMAGE_TAG
+
+FROM slashnephy/epgbird:$IMAGE_TAG AS image
 
 # Final Stage
 FROM ghcr.io/starrybluesky/ffmpeg:4.3.2-ubuntu
