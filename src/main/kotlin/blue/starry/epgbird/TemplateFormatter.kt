@@ -1,6 +1,7 @@
 package blue.starry.epgbird
 
 import com.twitter.twittertext.TwitterTextParser
+import io.ktor.client.features.ClientRequestException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -26,7 +27,11 @@ class TemplateFormatter(private val item: ProgramItem) {
 
     private suspend fun getComment(): CommentInfo? {
         if (_comment == null) {
-            _comment = SayaApi.getCommentInfo(getChannel() ?: return null)
+            _comment = try {
+                SayaApi.getCommentInfo(getChannel() ?: return null)
+            } catch (e: ClientRequestException) {
+                null
+            }
         }
 
         return _comment
