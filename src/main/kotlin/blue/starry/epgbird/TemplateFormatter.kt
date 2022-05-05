@@ -9,7 +9,7 @@ import java.util.*
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 
 class TemplateFormatter(private val item: ProgramItem) {
@@ -33,10 +33,10 @@ class TemplateFormatter(private val item: ProgramItem) {
     }
 
     suspend fun format(): String { // 経過時間 (分)
-        val elapsedMinutes = Duration.milliseconds((Instant.now().toEpochMilli() - item.startAt)).toDouble(DurationUnit.MINUTES).roundToInt()
+        val elapsedMinutes = ((Instant.now().toEpochMilli() - item.startAt)).milliseconds.inWholeMinutes
         val template = when { // 予約追加
             item.isReserve -> Env.RESERVES_FORMAT // 録画開始
-            item.isRecording && elapsedMinutes == 0 -> Env.RECORD_START_FORMAT // 録画中
+            item.isRecording && elapsedMinutes == 0L -> Env.RECORD_START_FORMAT // 録画中
             item.isRecording -> Env.RECORDING_FORMAT // 録画完了
             else -> Env.RECORD_END_FORMAT
         }
@@ -74,7 +74,7 @@ class TemplateFormatter(private val item: ProgramItem) {
                 val endAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.endAt), ZoneOffset.systemDefault())
                 formatter.format(endAt) // 番組の長さ (xx時間xx分 形式)
             }.replace("%DURATION%") {
-                val duration = Duration.milliseconds((item.endAt - item.startAt))
+                val duration = (item.endAt - item.startAt).milliseconds
                 val hours = floor(duration.toDouble(DurationUnit.HOURS)).toInt()
                 val minutes = duration.toDouble(DurationUnit.MINUTES).roundToInt() - hours * 60
 

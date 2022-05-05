@@ -13,10 +13,7 @@ import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
 import kotlin.io.path.name
-import kotlin.math.roundToInt
-import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.milliseconds
+import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("BlockingMethodInNonBlockingContext")
 object Epgbird {
@@ -30,9 +27,9 @@ object Epgbird {
             .filter { it.channelId !in Env.IGNORE_CHANNEL_IDS }
             .map { item ->
                 launch { // 経過時間 (分)
-                    val elapsedMinutes = Duration.milliseconds((Instant.now().toEpochMilli() - item.startAt)).toDouble(DurationUnit.MINUTES).roundToInt() // 番組の長さ (分)
-                    val totalMinutes = Duration.milliseconds((item.endAt - item.startAt)).toDouble(DurationUnit.MINUTES).roundToInt() // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
-                    if (item.isRecording && elapsedMinutes % Env.RECORDING_POST_FREQUENCY_MINUTES != 0) {
+                    val elapsedMinutes = (Instant.now().toEpochMilli() - item.startAt).milliseconds.inWholeMinutes // 番組の長さ (分)
+                    val totalMinutes = (item.endAt - item.startAt).milliseconds.inWholeMinutes // RECORDING_POST_FREQUENCY_MINS 分ごとに投稿
+                    if (item.isRecording && elapsedMinutes % Env.RECORDING_POST_FREQUENCY_MINUTES != 0L) {
                         return@launch
                     } // 番組の長さだけ録画した場合には無視
                     // ex) 30分番組で【30分録画中】とならないようにする
@@ -159,7 +156,8 @@ object Epgbird {
 
                 EpgbirdTwitterClient.use { client ->
                     client.statuses.createWithMedia(
-                        status = text, media = listOf(
+                        status = text,
+                        media = listOf(
                             MediaComponent(mp4, MediaType.MP4, MediaCategory.TweetVideo)
                         )
                     ).execute()
