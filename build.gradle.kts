@@ -1,7 +1,11 @@
 plugins {
-    kotlin("jvm") version "1.5.20"
-    kotlin("plugin.serialization") version "1.5.20"
-    id("com.github.johnrengelman.shadow") version "7.0.0"
+    kotlin("jvm") version "1.5.21"
+    kotlin("plugin.serialization") version "1.5.21"
+    id("com.github.johnrengelman.shadow") version "7.1.2"
+
+    id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
+    id("com.adarshr.test-logger") version "3.2.0"
+    id("net.rdrei.android.buildtimetracker") version "0.11.0"
 }
 
 object Versions {
@@ -49,9 +53,9 @@ kotlin {
     target {
         compilations.all {
             kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_11.toString()
-                apiVersion = "1.5"
-                languageVersion = "1.5"
+                jvmTarget = JavaVersion.VERSION_17.toString()
+                apiVersion = "1.6"
+                languageVersion = "1.6"
                 allWarningsAsErrors = true
                 verbose = true
             }
