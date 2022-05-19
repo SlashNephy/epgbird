@@ -26,11 +26,11 @@ Demo Account => [@a0b4m0c4](https://twitter.com/a0b4m0c4)
 
 There are some image tags.
 
-- `slashnephy/epgbird:latest`  
+- `ghcr.io/slashnephy/epgbird:latest`  
   Automatically published every push to `master` branch.
-- `slashnephy/epgbird:dev`  
+- `ghcr.io/slashnephy/epgbird:dev`  
   Automatically published every push to `dev` branch.
-- `slashnephy/epgbird:<version>`  
+- `ghcr.io/slashnephy/epgbird:<version>`  
   Coresponding to release tags on GitHub.
 
 `docker-compose.yml`
@@ -44,7 +44,7 @@ services:
   
   epgbird:
     container_name: epgbird
-    image: slashnephy/epgbird:latest
+    image: ghcr.io/slashnephy/epgbird
     restart: always
     volumes:
       - /mnt:/mnt:ro
