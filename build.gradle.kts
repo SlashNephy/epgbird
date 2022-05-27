@@ -15,7 +15,7 @@ dependencies {
     implementation("blue.starry:penicillin:6.2.3")
     implementation("com.twitter.twittertext:twitter-text:3.1.0")
     implementation("io.ktor:ktor-client-cio:1.6.8")
-    implementation("io.ktor:ktor-client-serialization:1.6.8")
+    implementation("io.ktor:ktor-client-serialization:2.0.2")
 
     implementation("io.github.microutils:kotlin-logging:2.1.23")
     implementation("ch.qos.logback:logback-classic:1.2.11")
