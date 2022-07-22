@@ -12,7 +12,7 @@ COPY src/main/ /app/src/main/
 RUN gradle shadowJar --parallel --console=verbose
 
 # Final Stage
-FROM amazoncorretto:18.0.1 as runtime
+FROM amazoncorretto:18.0.2 as runtime
 
 #RUN cd /opt \
 #    && mkdir ffmpeg \
