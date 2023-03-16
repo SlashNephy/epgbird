@@ -17,7 +17,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:1.6.8")
     implementation("io.ktor:ktor-client-serialization:1.6.8")
 
-    implementation("io.github.microutils:kotlin-logging:2.1.23")
+    implementation("io.github.microutils:kotlin-logging:3.0.5")
     implementation("ch.qos.logback:logback-classic:1.2.11")
 }
 
