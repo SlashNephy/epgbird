@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("blue.starry:penicillin:6.2.3")
+    implementation("blue.starry:penicillin:6.3.0")
     implementation("com.twitter.twittertext:twitter-text:3.1.0")
     implementation("io.ktor:ktor-client-cio:1.6.8")
     implementation("io.ktor:ktor-client-serialization:1.6.8")
