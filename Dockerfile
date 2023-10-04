@@ -1,10 +1,10 @@
-FROM --platform=$BUILDPLATFORM gradle:7.5.0-jdk17 AS cache
+FROM --platform=$BUILDPLATFORM gradle:8.3.0-jdk17@sha256:461018d754af5e85ca08b8f38e5f583d65ebadf83be8ad01f3bff03740ccef4f AS cache
 WORKDIR /app
 ENV GRADLE_USER_HOME /app/gradle
 COPY *.gradle.kts gradle.properties /app/
 RUN gradle shadowJar --parallel --console=verbose
 
-FROM --platform=$BUILDPLATFORM gradle:7.5.0-jdk17 AS build
+FROM --platform=$BUILDPLATFORM gradle:8.3.0-jdk17@sha256:461018d754af5e85ca08b8f38e5f583d65ebadf83be8ad01f3bff03740ccef4f AS build
 WORKDIR /app
 COPY --from=cache /app/gradle /home/gradle/.gradle
 COPY *.gradle.kts gradle.properties /app/
